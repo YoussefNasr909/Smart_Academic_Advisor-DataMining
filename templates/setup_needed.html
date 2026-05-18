@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Setup Required - Smart Academic Advisor{% endblock %}
+{% block content %}
+<section class="plain-page">
+  <div class="card setup-card">
+    <span class="eyebrow">Setup required</span>
+    <h1>Models were not found</h1>
+    <p>The app is installed, but the trained model file is missing. Run these commands once from the project folder:</p>
+    <pre class="code-block">python generate_data.py
+python train_models.py
+python app.py</pre>
+    <a class="btn-primary" href="/">Reload after setup</a>
+  </div>
+</section>
+{% endblock %}

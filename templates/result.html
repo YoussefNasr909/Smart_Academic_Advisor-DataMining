@@ -1,0 +1,212 @@
+{% extends "base.html" %}
+{% block title %}Recommendation - {{ track }}{% endblock %}
+
+{% block content %}
+<section class="result-page">
+  <div class="result-hero" style="--track-color: {{ meta.color }}; --track-bg: {{ meta.bg }}">
+    <div class="track-token">{{ meta.icon }}</div>
+    <div class="result-hero-copy">
+      <span class="eyebrow light">{{ algorithm_label }} | {{ accuracy }}% test accuracy</span>
+      <h1>{{ track }}</h1>
+      <p>{{ meta.desc }}</p>
+    </div>
+    <div class="confidence-card">
+      <span>Top confidence</span>
+      <strong>{{ track_probs[track] }}%</strong>
+    </div>
+  </div>
+
+  <div class="quick-actions no-print">
+    <a href="{{ url_for('index') }}" class="btn-secondary">Try another student</a>
+    <button type="button" class="btn-primary" onclick="window.print()">Print / save PDF report</button>
+  </div>
+
+  <div class="result-grid">
+    <section class="card wide">
+      <div class="card-header compact">
+        <div>
+          <span class="eyebrow">Recommendation evidence</span>
+          <h2>Why this track?</h2>
+        </div>
+      </div>
+      <div class="reason-list">
+        {% for reason in explanation %}
+        <div class="reason-item"><span>{{ loop.index }}</span><p>{{ reason }}</p></div>
+        {% endfor %}
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-header compact">
+        <div>
+          <span class="eyebrow">Model output</span>
+          <h2>Track probabilities</h2>
+        </div>
+      </div>
+      <div class="prob-list">
+        {% for t, prob in track_probs.items() %}
+        <div class="prob-row {% if t == track %}top{% endif %}">
+          <div class="prob-head">
+            <span>{{ all_metas[t].short }}</span>
+            <strong>{{ prob }}%</strong>
+          </div>
+          <div class="prob-bar-wrap"><div class="prob-bar" style="width: {{ prob }}%; background: {{ all_metas[t].color }}"></div></div>
+          <small>{{ t }}</small>
+        </div>
+        {% endfor %}
+      </div>
+    </section>
+
+    <section class="card wide">
+      <div class="card-header compact">
+        <div>
+          <span class="eyebrow">Model comparison</span>
+          <h2>Same student across all algorithms</h2>
+        </div>
+        <p>This makes the Decision Tree, Random Forest, and KNN outputs easy to compare during the demo.</p>
+      </div>
+      <div class="model-compare-grid">
+        {% for item in model_comparison %}
+        <div class="model-compare-card {% if item.key == algorithm %}selected{% endif %}">
+          <div class="compare-topline">
+            <strong>{{ item.algorithm }}</strong>
+            <span>{{ item.accuracy }}% acc.</span>
+          </div>
+          <h3>{{ item.track }}</h3>
+          <div class="prob-bar-wrap"><div class="prob-bar" style="width: {{ item.confidence }}%; background: {{ all_metas[item.track].color }}"></div></div>
+          <small>{{ item.confidence }}% confidence · {% if item.agrees %}Agrees with selected result{% else %}Different recommendation{% endif %}</small>
+        </div>
+        {% endfor %}
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-header compact">
+        <div>
+          <span class="eyebrow">Student profile</span>
+          <h2>Input summary</h2>
+        </div>
+      </div>
+      <div class="profile-summary">
+        <div class="stat-card"><strong>{{ gpa }}</strong><span>GPA</span></div>
+        <div class="stat-card"><strong>{{ interest }}</strong><span>Interest</span></div>
+        <div class="stat-card {% if failed %}danger{% endif %}"><strong>{{ failed|length }}</strong><span>Failed courses</span></div>
+      </div>
+      <div class="mini-grades">
+        {% for key, label in course_labels.items() %}
+        <div class="mini-grade-row">
+          <span>{{ label }}</span>
+          <div class="mini-bar-wrap"><div class="mini-bar" data-level="{{ grade_levels[key] }}" style="width: {{ grades[key] }}%"></div></div>
+          <strong data-level="{{ grade_levels[key] }}">{{ grades[key] }}</strong>
+        </div>
+        {% endfor %}
+      </div>
+    </section>
+
+    <section class="card wide">
+      <div class="card-header compact">
+        <div>
+          <span class="eyebrow">Academic advising</span>
+          <h2>Warnings and prerequisite plan</h2>
+        </div>
+      </div>
+      <div class="alert-list">
+        {% for warning in warnings %}
+        <div class="alert-item {% if 'No critical' in warning %}success{% endif %}">{{ warning }}</div>
+        {% endfor %}
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-header compact">
+        <div>
+          <span class="eyebrow">Courses</span>
+          <h2>Recommended electives</h2>
+        </div>
+      </div>
+      <ul class="pill-list">
+        {% for course in meta.electives %}
+        <li style="--accent: {{ meta.color }}">{{ course }}</li>
+        {% endfor %}
+      </ul>
+      <h3 class="small-heading">Career options</h3>
+      <div class="career-grid">
+        {% for career in meta.careers %}
+        <span>{{ career }}</span>
+        {% endfor %}
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-header compact">
+        <div>
+          <span class="eyebrow">Graduation path</span>
+          <h2>Suggested next steps</h2>
+        </div>
+      </div>
+      <div class="timeline">
+        {% for step in graduation_path %}
+        <div class="timeline-item">
+          <strong>{{ step["term"] }}</strong>
+          <ul>
+            {% for item in step["items"] %}<li>{{ item }}</li>{% endfor %}
+          </ul>
+        </div>
+        {% endfor %}
+      </div>
+    </section>
+
+    <section class="card wide">
+      <div class="card-header compact">
+        <div>
+          <span class="eyebrow">KNN evidence</span>
+          <h2>Similar historical students</h2>
+        </div>
+        <p>Useful for showing how KNN supports the advice.</p>
+      </div>
+      {% if similar_students %}
+      <div class="similar-grid">
+        {% for student in similar_students %}
+        <div class="similar-card">
+          <strong>{{ student.student_id }}</strong>
+          <span>{{ student.similarity }}% similar</span>
+          <p>{{ student.track }}</p>
+          <small>GPA {{ student.gpa }} | Interest: {{ student.interest }} | Failed: {{ student.failed_courses }}</small>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <p class="muted">Similar student data is not available.</p>
+      {% endif %}
+    </section>
+
+    <section class="card wide">
+      <div class="card-header compact">
+        <div>
+          <span class="eyebrow">Association rules</span>
+          <h2>Historical patterns that matched this student</h2>
+        </div>
+      </div>
+      {% if rules %}
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>If student has</th><th>Then pattern suggests</th><th>Confidence</th><th>Lift</th></tr></thead>
+          <tbody>
+            {% for rule in rules %}
+            <tr>
+              <td>{{ rule.antecedents | join(', ') }}</td>
+              <td>{{ rule.consequents | join(', ') }}</td>
+              <td>{{ rule.confidence }}%</td>
+              <td>{{ rule.lift }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <p class="muted">No strong association rule matched this exact profile, so the recommendation mainly uses the trained ML model.</p>
+      {% endif %}
+    </section>
+  </div>
+</section>
+{% endblock %}

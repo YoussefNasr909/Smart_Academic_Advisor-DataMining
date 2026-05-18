@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Smart Academic Advisor{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+  <a class="skip-link" href="#mainContent">Skip to content</a>
+
+  <nav class="navbar" aria-label="Main navigation">
+    <a href="{{ url_for('index') }}" class="navbar-brand" aria-label="Smart Academic Advisor home">
+      <span class="brand-mark" aria-hidden="true">
+        <svg class="brand-logo" viewBox="0 0 64 64" focusable="false">
+          <defs>
+            <linearGradient id="brandShield" x1="9" y1="8" x2="55" y2="58" gradientUnits="userSpaceOnUse">
+              <stop stop-color="#1d4ed8"/>
+              <stop offset="0.52" stop-color="#4f46e5"/>
+              <stop offset="1" stop-color="#0f766e"/>
+            </linearGradient>
+            <linearGradient id="brandPages" x1="18" y1="24" x2="46" y2="45" gradientUnits="userSpaceOnUse">
+              <stop stop-color="#ffffff"/>
+              <stop offset="1" stop-color="#dbeafe"/>
+            </linearGradient>
+          </defs>
+          <path class="logo-shield" d="M32 5.5c12.8 0 23 9.6 23 21.5v9.5c0 5.3-2.8 10.2-7.4 12.8L35.1 56.4a6.3 6.3 0 0 1-6.2 0l-12.5-7.1A14.7 14.7 0 0 1 9 36.5V27C9 15.1 19.2 5.5 32 5.5Z"/>
+          <path class="logo-book-left" d="M17.2 26.7c5.4-1 9.7-.2 12.9 2.4v17.3c-3.7-2.3-8-3-12.9-2V26.7Z"/>
+          <path class="logo-book-right" d="M46.8 26.7c-5.4-1-9.7-.2-12.9 2.4v17.3c3.7-2.3 8-3 12.9-2V26.7Z"/>
+          <path class="logo-spine" d="M32 28.7v18.8"/>
+          <path class="logo-cap" d="M20.6 20.3 32 14.9l11.4 5.4L32 25.9l-11.4-5.6Z"/>
+          <path class="logo-cap-band" d="M25.4 24.6v5.2c3.9 2.1 9.3 2.1 13.2 0v-5.2"/>
+          <path class="logo-route" d="M21.7 38.6c4.4-4.2 9.7-2.8 14.2-8.9"/>
+          <circle class="logo-node logo-node-start" cx="21.7" cy="38.6" r="2"/>
+          <circle class="logo-node" cx="35.9" cy="29.7" r="2"/>
+        </svg>
+      </span>
+      <span class="brand-copy">
+        <strong>Academic Advisor</strong>
+        <small>ML-based student guidance</small>
+      </span>
+    </a>
+
+    <div class="navbar-actions">
+      <a href="{{ url_for('index') }}" class="nav-link {% if request.path == '/' %}active{% endif %}">Advisor</a>
+      <a href="{{ url_for('dashboard') }}" class="nav-link {% if request.path == '/dashboard' %}active{% endif %}">Dashboard</a>
+      <button class="theme-toggle" type="button" onclick="toggleTheme()" aria-label="Toggle dark mode">
+        <span class="theme-dot" aria-hidden="true"></span>
+        <span class="theme-label">Theme</span>
+      </button>
+    </div>
+  </nav>
+
+  <main id="mainContent">
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="site-footer">
+    <p>Smart Academic Advisor · Decision Tree · Random Forest · KNN · Association Rules</p>
+  </footer>
+
+  <script>
+    const savedTheme = localStorage.getItem('advisor-theme') || 'light';
+    document.documentElement.dataset.theme = savedTheme;
+    function toggleTheme() {
+      const current = document.documentElement.dataset.theme || 'light';
+      const next = current === 'light' ? 'dark' : 'light';
+      document.documentElement.dataset.theme = next;
+      localStorage.setItem('advisor-theme', next);
+    }
+
+    function initRevealAnimations() {
+      const revealItems = document.querySelectorAll('.card, .metric-card, .hero-card, .result-hero, .page-heading');
+      revealItems.forEach((item, index) => {
+        item.classList.add('reveal');
+        item.style.setProperty('--delay', Math.min(index * 45, 360) + 'ms');
+      });
+      if (!('IntersectionObserver' in window)) {
+        revealItems.forEach(item => item.classList.add('visible'));
+        return;
+      }
+      const observer = new IntersectionObserver(entries => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('visible');
+            observer.unobserve(entry.target);
+          }
+        });
+      }, { threshold: 0.12 });
+      revealItems.forEach(item => observer.observe(item));
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      initRevealAnimations();
+    });
+  </script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

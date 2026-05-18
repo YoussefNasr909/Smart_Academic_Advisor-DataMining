@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+{% block title %}Dashboard - Smart Academic Advisor{% endblock %}
+
+{% block content %}
+<section class="dashboard-page">
+  <div class="page-heading">
+    <span class="eyebrow">Analytics dashboard</span>
+    <h1>Model performance and academic data overview</h1>
+    <p>This page proves the project uses all required algorithms and shows dataset, accuracy, feature importance, confusion matrices, and association rules.</p>
+  </div>
+
+  <div class="metric-grid">
+    <div class="metric-card"><strong>{{ total_students }}</strong><span>Students in dataset</span></div>
+    <div class="metric-card"><strong>{{ failed_rate }}%</strong><span>Students with failed courses</span></div>
+    <div class="metric-card"><strong>{{ top_rules|length }}</strong><span>Displayed association rules</span></div>
+    <div class="metric-card"><strong>{{ accuracies.random_forest }}%</strong><span>Random Forest accuracy</span></div>
+  </div>
+
+  <div class="dashboard-grid">
+    <section class="card">
+      <div class="card-header compact"><div><span class="eyebrow">Classification</span><h2>Model accuracy</h2></div></div>
+      <div class="bar-list">
+        {% for key, label in algorithm_labels.items() %}
+        <div class="data-bar-row">
+          <div class="bar-head"><span>{{ label }}</span><strong>{{ accuracies[key] }}%</strong></div>
+          <div class="data-bar-wrap"><div class="data-bar" style="width: {{ accuracies[key] }}%"></div></div>
+          <small>5-fold CV: {{ cv_scores[key].mean }}% +/- {{ cv_scores[key].std }}%</small>
+        </div>
+        {% endfor %}
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-header compact"><div><span class="eyebrow">Dataset</span><h2>Track distribution</h2></div></div>
+      <div class="bar-list">
+        {% for track, count in track_counts.items() %}
+        <div class="data-bar-row">
+          <div class="bar-head"><span>{{ track }}</span><strong>{{ count }}</strong></div>
+          <div class="data-bar-wrap"><div class="data-bar" style="width: {{ (count / total_students * 100)|round(1) }}%; background: {{ track_metas[track].color }}"></div></div>
+        </div>
+        {% endfor %}
+      </div>
+    </section>
+
+    <section class="card wide">
+      <div class="card-header compact"><div><span class="eyebrow">Requirement coverage</span><h2>Feature importance</h2></div><p>Includes interests and passed/failed course indicators.</p></div>
+      <div class="importance-grid">
+        {% for name, value in fi.items() %}
+        <div class="importance-row">
+          <span>{{ name }}</span>
+          <div class="data-bar-wrap"><div class="data-bar" style="width: {{ (value * 100)|round(1) }}%"></div></div>
+          <strong>{{ (value * 100)|round(1) }}%</strong>
+        </div>
+        {% endfor %}
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-header compact"><div><span class="eyebrow">Academic profile</span><h2>Average GPA by track</h2></div></div>
+      <div class="bar-list">
+        {% for track, gpa in avg_gpa.items() %}
+        <div class="data-bar-row">
+          <div class="bar-head"><span>{{ track }}</span><strong>{{ gpa }}</strong></div>
+          <div class="data-bar-wrap"><div class="data-bar" style="width: {{ (gpa / 4 * 100)|round(1) }}%; background: {{ track_metas[track].color }}"></div></div>
+        </div>
+        {% endfor %}
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-header compact"><div><span class="eyebrow">Student interests</span><h2>Interest distribution</h2></div></div>
+      <div class="bar-list">
+        {% for interest, count in interest_counts.items() %}
+        <div class="data-bar-row">
+          <div class="bar-head"><span>{{ interest }}</span><strong>{{ count }}</strong></div>
+          <div class="data-bar-wrap"><div class="data-bar" style="width: {{ (count / total_students * 100)|round(1) }}%"></div></div>
+        </div>
+        {% endfor %}
+      </div>
+    </section>
+
+    <section class="card wide">
+      <div class="card-header compact"><div><span class="eyebrow">Courses</span><h2>Average grades by subject</h2></div></div>
+      <div class="grade-dashboard-grid">
+        {% for course, avg in avg_grades.items() %}
+        <div class="data-bar-row">
+          <div class="bar-head"><span>{{ course }}</span><strong>{{ avg }}</strong></div>
+          <div class="data-bar-wrap"><div class="data-bar" style="width: {{ avg }}%"></div></div>
+        </div>
+        {% endfor %}
+      </div>
+    </section>
+
+    <section class="card wide">
+      <div class="card-header compact"><div><span class="eyebrow">Association Rules</span><h2>Top mined patterns</h2></div></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Antecedents</th><th>Consequents</th><th>Support</th><th>Confidence</th><th>Lift</th></tr></thead>
+          <tbody>
+            {% for rule in top_rules %}
+            <tr>
+              <td>{{ rule.antecedents | join(', ') }}</td>
+              <td>{{ rule.consequents | join(', ') }}</td>
+              <td>{{ rule.support }}%</td>
+              <td>{{ rule.confidence }}%</td>
+              <td>{{ rule.lift }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="card wide">
+      <div class="card-header compact"><div><span class="eyebrow">Evaluation</span><h2>Confusion matrices</h2></div><p>Rows are actual classes and columns are predicted classes.</p></div>
+      <div class="matrix-grid">
+        {% for key, label in algorithm_labels.items() %}
+        <div class="matrix-card">
+          <h3>{{ label }}</h3>
+          <div class="table-wrap small-table">
+            <table>
+              <thead>
+                <tr><th>Actual / Predicted</th>{% for label in class_short_labels %}<th>{{ label }}</th>{% endfor %}</tr>
+              </thead>
+              <tbody>
+                {% for row in cms[key] %}
+                <tr><th>{{ class_short_labels[loop.index0] }}</th>{% for value in row %}<td>{{ value }}</td>{% endfor %}</tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          <div class="class-legend">
+            {% for class_name in classes %}<span><strong>{{ class_short_labels[loop.index0] }}</strong> {{ class_name }}</span>{% endfor %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </section>
+  </div>
+</section>
+{% endblock %}

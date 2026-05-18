@@ -1,0 +1,186 @@
+========================================================================
+  SMART ACADEMIC ADVISOR — DATA PREPROCESSING REPORT
+  Generated : 2026-05-18 21:51:03
+========================================================================
+
+OVERVIEW
+--------
+  Input  : data/students_dirty.csv  (945 rows × 35 columns)
+  Output : data/students.csv         (900 rows × 34 columns)
+  Rows removed     : 45 (4.8%)
+  Overall status   : CLEAN OK
+
+STEP SUMMARY
+------------
+Step  Title                                  Rows Before Rows After   Changed
+------------------------------------------------------------------------------
+1     Load dirty dataset                             945        945         0
+2     Drop junk columns                              945        945         0
+3     Standardise column names                       945        945         0
+4     Remove duplicates                              945        900        45
+5     Clean student_id                               900        900         0
+6     Parse & clean GPA                              900        900       140
+7     Parse & clean grade columns                    900        900     1,645
+8     Standardise interest                           900        900       374
+9     Recompute binary flags                         900        900       245
+10    Recompute summary counts                       900        900         0
+11    Standardise None encoding                      900        900       146
+12    Enforce types & column order                   900        900         0
+13    Final validation                               900        900         0
+
+STEP DETAILS
+------------
+
+-- Step 1: Load dirty dataset ------------------------------------------
+   Action  : Read 'data/students_dirty.csv'
+   Before  : 945 rows
+   After   : 945 rows
+   Note    : 35 columns, 2 missing cells total
+
+-- Step 2: Drop junk columns -------------------------------------------
+   Action  : Removed: ['extra_info']
+   Before  : 945 rows
+   After   : 945 rows
+   Note    : Kept 34 expected columns
+
+-- Step 3: Standardise column names ------------------------------------
+   Action  : Strip, lowercase, underscore
+   Before  : 945 rows
+   After   : 945 rows
+   Note    : All column names normalised
+
+-- Step 4: Remove duplicates -------------------------------------------
+   Action  : drop_duplicates() on all columns
+   Before  : 945 rows
+   After   : 900 rows
+   Changed : 45
+   Note    : 45 exact duplicate rows dropped
+
+-- Step 5: Clean student_id --------------------------------------------
+   Action  : Normalise format to STU#### then drop ID duplicates
+   Before  : 900 rows
+   After   : 900 rows
+   Note    : Patterns handled: stu-####, STU ####, bare number, trailing # etc.
+
+-- Step 6: Parse & clean GPA -------------------------------------------
+   Action  : parse_gpa() -> numeric -> clamp [0,4] -> fill missing with median
+   Before  : 900 rows
+   After   : 900 rows
+   Changed : 140
+   Note    : String formats handled: '3.45a', '  2.7  ', 'N/A'.  21 outliers (e.g.
+   Note    : -1.5, 9.99) -> NaN then filled.
+
+-- Step 7: Parse & clean grade columns ---------------------------------
+   Action  : parse_grade() -> numeric -> clamp [0,100] -> fill missing with column median
+   Before  : 900 rows
+   After   : 900 rows
+   Changed : 1,645
+   Note    : String formats: '85%', '90 pts', 'seventy', 'N/A'.  141 impossible
+   Note    : values (e.g. -999, 150) -> NaN then median-filled.
+
+-- Step 8: Standardise interest ----------------------------------------
+   Action  : Normalise case, strip whitespace/symbols, map typos to canonical value
+   Before  : 900 rows
+   After   : 900 rows
+   Changed : 374
+   Note    : Handled: ai/ml, Ai/Ml, AI ML, Neetworks, Softwre Engineering, Dat
+   Note    : Science, trailing @/# symbols, excess whitespace.
+
+-- Step 9: Recompute binary flags --------------------------------------
+   Action  : Derive {course}_passed / {course}_failed from cleaned grades (threshold 60)
+   Before  : 900 rows
+   After   : 900 rows
+   Changed : 245
+   Note    : Eliminates both-1 / both-0 / mismatch corruptions from injection.
+
+-- Step 10: Recompute summary counts ------------------------------------
+   Action  : passed_count, failed_count, excellent_count, weak_count from cleaned grades
+   Before  : 900 rows
+   After   : 900 rows
+   Note    : All four count columns recomputed deterministically.
+
+-- Step 11: Standardise None encoding -----------------------------------
+   Action  : Map '', 'n/a', 'na', '-', 'null', 'none', 'nan' -> 'None' in failed_courses
+   Before  : 900 rows
+   After   : 900 rows
+   Changed : 146
+   Note    : Also cross-validated against failed_count to enforce consistency.
+
+-- Step 12: Enforce types & column order --------------------------------
+   Action  : Cast GPA->float, grades->int, binary->int; apply canonical column order
+   Before  : 900 rows
+   After   : 900 rows
+
+-- Step 13: Final validation --------------------------------------------
+   Action  : Check nulls, grade range, GPA range, interest validity, binary flags
+   Before  : 900 rows
+   After   : 900 rows
+   Note    : Nulls=0, InvalidGrades=0, InvalidGPA=0, InvalidInterest=0,
+   Note    : FlagViolations=0
+
+ISSUES INJECTED (for reference)
+--------------------------------
+  1.  Missing / null values           GPA ~10%, grades ~8% each
+  2.  Duplicate rows                  ~5% of dataset
+  3.  Inconsistent interest casing    ai/ml, Ai/Ml, AI ML
+  4.  Typos in categorical values     Neetworks, Softwre Eng
+  5.  Outlier grades                  -999, 150 (outside 0-100)
+  6.  Outlier GPA                     -1.5, 9.99 (outside 0-4)
+  7.  Grade as string                 '85%', 'seventy', 'N/A'
+  8.  GPA as string                   '3.45a', 'N/A', '  2.7  '
+  9.  Inconsistent student_id format  stu-0001, STU 0001, 1
+  10. Whitespace / special characters in interest, student_id
+  11. None encoding variants          'none','N/A','na','-',''
+  12. Binary flag corruption          passed+failed both 0 or 1
+  13. Count field inconsistencies     passed_count, failed_count
+  14. Float where int expected        grades as 85.7
+  15. Junk column                     'extra_info'
+
+CLEANING STRATEGIES APPLIED
+---------------------------
+  Missing values    -> Filled with column median (GPA and each grade).
+                      Categorical missing -> default 'Undecided'.
+  Duplicates        -> Exact-row duplicates dropped; ID-collision
+                      duplicates deduplicated (keep first).
+  String grades     -> Regex strip of '%', 'pts', 'points'; word-to-
+                      number map ('seventy' -> 70); leading numeric
+                      extraction; 'N/A' -> NaN.
+  String GPA        -> Remove non-numeric chars, cast to float;
+                      outliers (< 0 or > 4) nullified then median-filled.
+  Outlier grades    -> Values outside [0, 100] set to NaN then filled.
+  Interest typos    -> Strip special chars, lowercase, whitespace
+                      collapse, map via canonical dictionary.
+  Binary flags      -> Recomputed deterministically from cleaned grades
+                      (threshold 60). Eliminates all corruption types.
+  Summary counts    -> Recomputed from cleaned binary flags.
+  None encoding     -> Mapped '', 'n/a', '-', 'null' -> 'None'.
+  Junk columns      -> Dropped any column not in the expected schema.
+  Data types        -> Enforced: GPA->float, grades/flags/counts->int.
+
+FINAL DATASET PROFILE
+---------------------
+  Total students     : 900
+  Columns            : 34
+  Missing cells      : 0
+  GPA range          : 0.50 – 3.35
+  GPA mean           : 2.93
+  math_grade                 mean=76.0  min=36  max=100
+  ai_grade                   mean=68.0  min=30  max=100
+  programming_grade          mean=81.3  min=43  max=100
+
+  Track distribution:
+    Web Development                  208  ( 23.1%)
+    Network Engineering              195  ( 21.7%)
+    AI/Machine Learning              180  ( 20.0%)
+    Software Engineering             161  ( 17.9%)
+    Data Science                     156  ( 17.3%)
+
+  Interest distribution:
+    AI/ML                            176  ( 19.6%)
+    Networks                         173  ( 19.2%)
+    Software Engineering             171  ( 19.0%)
+    Web Development                  164  ( 18.2%)
+    Data Science                     156  ( 17.3%)
+    Undecided                         60  (  6.7%)
+
+========================================================================

@@ -1,0 +1,211 @@
+{% extends "base.html" %}
+{% block title %}Get Recommendation - Smart Academic Advisor{% endblock %}
+
+{% block content %}
+<section class="hero advisor-hero">
+  <div class="hero-content hero-split">
+    <div class="hero-copy">
+      <span class="eyebrow">Smart academic advising</span>
+      <h1>Recommend the right track with evidence students can understand.</h1>
+      <p>Enter the student profile once. The system checks GPA, course grades, interests, passed/failed courses, similar students, and association rules to produce a clear advisor report.</p>
+      <div class="hero-actions">
+        <a class="btn-primary" href="#advisorForm">Start recommendation</a>
+        <a class="btn-secondary" href="{{ url_for('dashboard') }}">View dashboard</a>
+      </div>
+    </div>
+
+    <aside class="hero-card" aria-label="Advisor workflow summary">
+      <div class="hero-card-header">
+        <span>Workflow</span>
+        <strong>3 clear steps</strong>
+      </div>
+      <ol class="workflow-list">
+        <li><span>1</span><div><strong>Student profile</strong><small>GPA, interest, and course grades.</small></div></li>
+        <li><span>2</span><div><strong>ML recommendation</strong><small>Decision Tree, Random Forest, or KNN.</small></div></li>
+        <li><span>3</span><div><strong>Advisor report</strong><small>Reasons, warnings, electives, and path.</small></div></li>
+      </ol>
+    </aside>
+  </div>
+</section>
+
+<section class="form-section">
+  <form action="{{ url_for('predict') }}" method="POST" class="advisor-form" id="advisorForm">
+    <div class="card section-card sample-card no-print">
+      <div class="card-header">
+        <div>
+          <span class="eyebrow">Demo helpers</span>
+          <h2>Load a sample profile</h2>
+        </div>
+        <p>Use these during your presentation so teammates and the doctor can test the app quickly.</p>
+      </div>
+      <div class="sample-grid">
+        <button type="button" class="sample-btn" onclick="loadSample('ai')">
+          <strong>AI student</strong>
+          <span>Strong math, algorithms, and AI grades.</span>
+        </button>
+        <button type="button" class="sample-btn" onclick="loadSample('web')">
+          <strong>Web student</strong>
+          <span>Strong programming, databases, and web grade.</span>
+        </button>
+        <button type="button" class="sample-btn warning" onclick="loadSample('risk')">
+          <strong>Needs advising</strong>
+          <span>Includes failed courses to test warnings.</span>
+        </button>
+      </div>
+    </div>
+    <div class="card section-card">
+      <div class="card-header">
+        <div>
+          <span class="eyebrow">Step 1</span>
+          <h2>Choose the recommendation model</h2>
+        </div>
+        <p>Use Random Forest for the strongest default result. Use KNN when you want to emphasize similar historical students.</p>
+      </div>
+      <div class="algo-grid">
+        {% for key, label in algorithm_labels.items() %}
+        <label class="algo-option {% if key == 'random_forest' %}selected{% endif %}">
+          <input type="radio" name="algorithm" value="{{ key }}" {% if key == 'random_forest' %}checked{% endif %}>
+          <span class="algo-title">{{ label }}</span>
+          <span class="algo-copy">
+            {% if key == 'decision_tree' %}Interpretable decisions for simple explanation.{% endif %}
+            {% if key == 'random_forest' %}Stable ensemble model with best accuracy.{% endif %}
+            {% if key == 'knn' %}Compares the student with similar cases.{% endif %}
+          </span>
+        </label>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="card section-card">
+      <div class="card-header">
+        <div>
+          <span class="eyebrow">Step 2</span>
+          <h2>Student profile</h2>
+        </div>
+        <p>GPA can be left empty. The app will estimate it from the entered course grades.</p>
+      </div>
+      <div class="profile-row">
+        <div class="field-group">
+          <label for="gpa">Cumulative GPA <span>(0.00 to 4.00)</span></label>
+          <input type="number" id="gpa" name="gpa" class="field-input" min="0" max="4" step="0.01" placeholder="Example: 3.25">
+        </div>
+        <div class="field-group">
+          <label for="interest">Primary interest</label>
+          <select id="interest" name="interest" class="field-input" required>
+            {% for interest in interests %}
+            <option value="{{ interest }}" {% if interest == 'Undecided' %}selected{% endif %}>{{ interest }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="card section-card">
+      <div class="card-header">
+        <div>
+          <span class="eyebrow">Step 3</span>
+          <h2>Course grades</h2>
+        </div>
+        <p>Grades below 60 are treated as failed courses and trigger advising warnings.</p>
+      </div>
+      <div class="grade-grid">
+        {% set courses = [
+          ('math_grade', 'Mathematics'),
+          ('programming_grade', 'Programming'),
+          ('data_structures_grade', 'Data Structures'),
+          ('algorithms_grade', 'Algorithms'),
+          ('databases_grade', 'Databases'),
+          ('networks_grade', 'Networks'),
+          ('ai_grade', 'Artificial Intelligence'),
+          ('web_grade', 'Web Development')
+        ] %}
+        {% for name, label in courses %}
+        <div class="grade-item" data-grade-item>
+          <div class="grade-label-row">
+            <label for="{{ name }}">{{ label }}</label>
+            <span class="grade-status" id="{{ name }}_status">Good</span>
+          </div>
+          <div class="grade-input-row">
+            <input type="range" name="{{ name }}" id="{{ name }}" class="grade-slider" min="0" max="100" value="75" oninput="syncGrade('{{ name }}', 'slider')">
+            <input type="number" id="{{ name }}_num" class="grade-num" min="0" max="100" value="75" oninput="syncGrade('{{ name }}', 'number')">
+          </div>
+          <div class="grade-bar-wrap" aria-hidden="true"><div class="grade-bar" id="{{ name }}_bar"></div></div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="submit-row sticky-submit">
+      <button class="btn-primary btn-large" type="submit">Generate advisor report</button>
+    </div>
+  </form>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const sampleProfiles = {
+  ai: {
+    algorithm: 'random_forest', gpa: '3.60', interest: 'AI/ML',
+    math_grade: 88, programming_grade: 92, data_structures_grade: 87, algorithms_grade: 90,
+    databases_grade: 75, networks_grade: 70, ai_grade: 95, web_grade: 72
+  },
+  web: {
+    algorithm: 'random_forest', gpa: '3.20', interest: 'Web Development',
+    math_grade: 72, programming_grade: 85, data_structures_grade: 78, algorithms_grade: 74,
+    databases_grade: 82, networks_grade: 68, ai_grade: 65, web_grade: 94
+  },
+  risk: {
+    algorithm: 'random_forest', gpa: '2.10', interest: 'Data Science',
+    math_grade: 55, programming_grade: 62, data_structures_grade: 58, algorithms_grade: 64,
+    databases_grade: 70, networks_grade: 50, ai_grade: 68, web_grade: 72
+  }
+};
+
+function loadSample(type) {
+  const profile = sampleProfiles[type];
+  if (!profile) return;
+  const form = document.getElementById('advisorForm');
+  form.querySelector(`input[name="algorithm"][value="${profile.algorithm}"]`).checked = true;
+  document.querySelectorAll('.algo-option').forEach(card => card.classList.remove('selected'));
+  form.querySelector(`input[name="algorithm"][value="${profile.algorithm}"]`).closest('.algo-option').classList.add('selected');
+  document.getElementById('gpa').value = profile.gpa;
+  document.getElementById('interest').value = profile.interest;
+  ['math_grade','programming_grade','data_structures_grade','algorithms_grade','databases_grade','networks_grade','ai_grade','web_grade'].forEach(name => {
+    document.getElementById(name).value = profile[name];
+    document.getElementById(name + '_num').value = profile[name];
+    syncGrade(name, 'slider');
+  });
+  document.getElementById('advisorForm').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function gradeStatus(value) {
+  if (value < 60) return ['Failed', 'danger'];
+  if (value < 70) return ['Weak', 'warning'];
+  if (value < 85) return ['Good', 'primary'];
+  return ['Excellent', 'success'];
+}
+function syncGrade(name, source) {
+  const slider = document.getElementById(name);
+  const number = document.getElementById(name + '_num');
+  const bar = document.getElementById(name + '_bar');
+  const status = document.getElementById(name + '_status');
+  let value = source === 'number' ? parseInt(number.value || 0) : parseInt(slider.value || 0);
+  value = Math.min(100, Math.max(0, value));
+  slider.value = value;
+  number.value = value;
+  bar.style.width = value + '%';
+  const [text, tone] = gradeStatus(value);
+  status.textContent = text;
+  status.dataset.tone = tone;
+  bar.dataset.tone = tone;
+}
+document.querySelectorAll('.algo-option input').forEach(input => {
+  input.addEventListener('change', () => {
+    document.querySelectorAll('.algo-option').forEach(card => card.classList.remove('selected'));
+    input.closest('.algo-option').classList.add('selected');
+  });
+});
+['math_grade','programming_grade','data_structures_grade','algorithms_grade','databases_grade','networks_grade','ai_grade','web_grade'].forEach(name => syncGrade(name, 'slider'));
+</script>
+{% endblock %}
