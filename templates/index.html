@@ -144,6 +144,8 @@
 
 {% block scripts %}
 <script>
+// Demo profiles fill the form quickly during the project discussion.
+// بالمصري: الأزرار دي بتجهز أمثلة سريعة بدل ما تكتب الدرجات بإيدك كل مرة.
 const sampleProfiles = {
   ai: {
     algorithm: 'random_forest', gpa: '3.60', interest: 'AI/ML',
@@ -163,6 +165,8 @@ const sampleProfiles = {
 };
 
 function loadSample(type) {
+  // Load one ready-made student profile into the advisor form.
+  // بالمصري: بتحط بيانات طالب جاهز في الفورم عشان نعمل demo بسرعة.
   const profile = sampleProfiles[type];
   if (!profile) return;
   const form = document.getElementById('advisorForm');
@@ -180,12 +184,16 @@ function loadSample(type) {
 }
 
 function gradeStatus(value) {
+  // Convert a numeric grade into a simple label for the UI.
+  // بالمصري: بنحوّل الدرجة لكلمة زي Good أو Failed عشان العرض يبقى مفهوم.
   if (value < 60) return ['Failed', 'danger'];
   if (value < 70) return ['Weak', 'warning'];
   if (value < 85) return ['Good', 'primary'];
   return ['Excellent', 'success'];
 }
 function syncGrade(name, source) {
+  // Keep the slider, number input, status label, and progress bar in sync.
+  // بالمصري: لو غيرت السلايدر أو الرقم، الباقي يتحدث معاه.
   const slider = document.getElementById(name);
   const number = document.getElementById(name + '_num');
   const bar = document.getElementById(name + '_bar');
@@ -201,6 +209,8 @@ function syncGrade(name, source) {
   bar.dataset.tone = tone;
 }
 document.querySelectorAll('.algo-option input').forEach(input => {
+  // Update the selected model card when the user changes the algorithm.
+  // بالمصري: بتعلّم على كارت الموديل اللي المستخدم اختاره.
   input.addEventListener('change', () => {
     document.querySelectorAll('.algo-option').forEach(card => card.classList.remove('selected'));
     input.closest('.algo-option').classList.add('selected');

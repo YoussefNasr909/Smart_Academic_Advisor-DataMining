@@ -63,9 +63,13 @@
   </footer>
 
   <script>
+    // Save the selected theme in the browser so it stays after refresh.
+    // بالمصري: لو اختارت dark mode، المتصفح يفتكره بعد الريفريش.
     const savedTheme = localStorage.getItem('advisor-theme') || 'light';
     document.documentElement.dataset.theme = savedTheme;
     function toggleTheme() {
+      // Switch between light and dark mode.
+      // بالمصري: الزرار ده بيبدّل بين الفاتح والغامق.
       const current = document.documentElement.dataset.theme || 'light';
       const next = current === 'light' ? 'dark' : 'light';
       document.documentElement.dataset.theme = next;
@@ -73,6 +77,8 @@
     }
 
     function initRevealAnimations() {
+      // Add simple reveal animation when cards enter the screen.
+      // بالمصري: دي حركة خفيفة للكروت وهي بتظهر في الصفحة.
       const revealItems = document.querySelectorAll('.card, .metric-card, .hero-card, .result-hero, .page-heading');
       revealItems.forEach((item, index) => {
         item.classList.add('reveal');

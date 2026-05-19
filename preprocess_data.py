@@ -36,6 +36,8 @@ import pandas as pd
 
 # -- Constants -----------------------------------------------------------------
 
+# These course keys are the base names used to build all grade and pass/fail columns.
+# بالمصري: نفس أسماء المواد لازم تفضل ثابتة بين التنضيف والتدريب والويب سايت.
 COURSE_KEYS = ["math", "programming", "data_structures", "algorithms",
                "databases", "networks", "ai", "web"]
 GRADE_COLS  = [f"{k}_grade" for k in COURSE_KEYS]
@@ -53,7 +55,9 @@ COURSE_LABELS = {
     "web_grade":             "Web Development",
 }
 
-# Canonical interest values + every known messy variant
+# Canonical interest values + every known messy variant.
+# This is used to clean typos like "web dev" and "neetworks".
+# بالمصري: أي كتابة غلط أو مختلفة للاهتمام بنرجعها للشكل الرسمي.
 INTEREST_CANONICAL: Dict[str, str] = {
     # AI/ML variants
     "ai/ml":                          "AI/ML",
@@ -95,13 +99,19 @@ INTEREST_CANONICAL: Dict[str, str] = {
     "undecidied":                     "Undecided",
 }
 
+# These are the only interest values allowed after preprocessing.
+# بالمصري: بعد التنضيف مفيش غير القيم دي مسموح بيها.
 VALID_INTERESTS = {
     "AI/ML", "Web Development", "Networks",
     "Data Science", "Software Engineering", "Undecided",
 }
 
+# These values all mean "no failed courses" or missing text in dirty input.
+# بالمصري: كل دول معانيهم إن مفيش قيمة واضحة أو مفيش مواد ساقطة.
 NONE_VARIANTS = {"none", "n/a", "na", "-", "", "null", "nan", "nil"}
 
+# Some dirty grades are written as words, so this map converts them to numbers.
+# بالمصري: لو الدرجة مكتوبة كلمة زي "seventy"، بنحولها لـ 70.
 WORD_TO_NUMBER = {
     "zero": 0, "ten": 10, "twenty": 20, "thirty": 30, "forty": 40,
     "fifty": 50, "sixty": 60, "seventy": 70, "eighty": 80,
@@ -111,6 +121,8 @@ WORD_TO_NUMBER = {
 
 # -- Logging helpers -----------------------------------------------------------
 
+# This class records each cleaning step so the project can show a clear preprocessing report.
+# بالمصري: دي بتسجل عملنا إيه في الداتا عشان نعرضه في التقرير ونشرحه للدكتور.
 class PreprocessingLog:
     """Collects all cleaning actions for the final report."""
 
@@ -159,6 +171,8 @@ class PreprocessingLog:
 
 # -- Value parsers -------------------------------------------------------------
 
+# This function converts messy grade values into clean numbers for model training.
+# بالمصري: دي بتنضف الدرجات المكتوبة غلط وتخليها أرقام ينفع الموديل يفهمها.
 def parse_grade(raw: Any) -> Optional[float]:
     """
     Convert a raw grade cell to a float (or None if unparseable).
@@ -186,6 +200,8 @@ def parse_grade(raw: Any) -> Optional[float]:
         return None
 
 
+# This function converts messy GPA values into clean numbers on the 0 to 4 scale.
+# بالمصري: دي بتنضف الـ GPA وتخليه رقم صالح بين 0 و4.
 def parse_gpa(raw: Any) -> Optional[float]:
     """Convert a raw GPA cell to float, or None if unparseable."""
     if raw is None or (isinstance(raw, float) and np.isnan(raw)):
@@ -201,6 +217,8 @@ def parse_gpa(raw: Any) -> Optional[float]:
         return None
 
 
+# This function changes interest typos and variants into one standard category.
+# بالمصري: لو الطالب كتب "web dev" أو "WEB DEVELOPMENT"، الاتنين يبقوا Web Development.
 def standardise_interest(raw: Any) -> str:
     """Map a messy interest string to one of the six canonical values."""
     if raw is None or (isinstance(raw, float) and np.isnan(raw)):
@@ -217,6 +235,8 @@ def standardise_interest(raw: Any) -> str:
     return "Undecided"
 
 
+# This function normalizes student IDs so duplicate students are easier to detect.
+# بالمصري: بتخلي شكل رقم الطالب ثابت عشان نعرف التكرار بسهولة.
 def clean_student_id(raw: Any) -> str:
     """Normalise student_id to STU####."""
     if raw is None or (isinstance(raw, float) and np.isnan(raw)):
@@ -232,6 +252,8 @@ def clean_student_id(raw: Any) -> str:
 
 # -- Main pipeline -------------------------------------------------------------
 
+# This function runs all preprocessing steps and creates the final clean dataset.
+# بالمصري: دي الماسورة الأساسية للتنضيف من أول الداتا الوسخة لحد CSV نظيف.
 def run_pipeline(input_path: str = "data/students_dirty.csv",
                  output_path: str = "data/students.csv",
                  report_path: str = "data/preprocessing_report.txt") -> pd.DataFrame:
@@ -261,6 +283,8 @@ def run_pipeline(input_path: str = "data/students_dirty.csv",
 
     # -- Step 2: Drop junk columns ---------------------------------------------
     print("\n[Step 2] Dropping irrelevant/junk columns...")
+    # Only columns in this expected schema are allowed to continue to training.
+    # بالمصري: أي عمود مش في الليست دي يعتبر noise ومش هيدخل التدريب.
     expected_cols = (
         ["student_id", "gpa"] + GRADE_COLS +
         ["interest", "passed_courses", "failed_courses",
@@ -348,6 +372,8 @@ def run_pipeline(input_path: str = "data/students_dirty.csv",
     total_str_grades     = 0
 
     for col in GRADE_COLS:
+        # Count string-like grades before cleaning so the report can show the data quality issue.
+        # بالمصري: بنعد القيم اللي كانت نصوص عشان التقرير يوضح حجم المشكلة.
         # Detect how many were non-numeric strings before conversion
         non_numeric_before = df[col].apply(
             lambda x: not str(x).replace(".", "").replace("-", "").isdigit()
@@ -437,6 +463,8 @@ def run_pipeline(input_path: str = "data/students_dirty.csv",
 
     # -- Step 12: Final column ordering and type enforcement ------------------
     print("\n[Step 12] Enforcing column order and data types...")
+    # Keeping a fixed column order makes the clean CSV easy to inspect and reuse.
+    # بالمصري: ترتيب الأعمدة الثابت يخلي الملف مفهوم ومناسب للتدريب.
     ordered_cols = (
         ["student_id", "gpa"] + GRADE_COLS +
         ["interest", "passed_courses", "failed_courses",
@@ -491,6 +519,8 @@ def run_pipeline(input_path: str = "data/students_dirty.csv",
     print(f"     Rows: {len(df):,}  |  Columns: {len(df.columns)}")
 
     # -- Write text report -----------------------------------------------------
+    # The report is useful in the discussion because it proves each cleaning step happened.
+    # بالمصري: التقرير ده دليل قدام الدكتور إن preprocessing اتعمل خطوة بخطوة.
     report = build_report(log, initial_rows, initial_cols, len(df), len(df.columns),
                           validation_passed, df)
     with open(report_path, "w", encoding="utf-8") as fh:
@@ -500,6 +530,8 @@ def run_pipeline(input_path: str = "data/students_dirty.csv",
     return df
 
 
+# This function builds the text report that explains what was cleaned and validated.
+# بالمصري: دي بتكتب ملخص التنضيف والنتيجة النهائية في ملف report.
 def build_report(log: PreprocessingLog,
                  dirty_rows: int, dirty_cols: int,
                  clean_rows: int, clean_cols: int,

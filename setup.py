@@ -18,6 +18,8 @@ import sys
 
 
 def run(command: list[str]) -> None:
+    # Run each setup command and stop immediately if any step fails.
+    # بالمصري: لو خطوة من setup فشلت، بنوقف عشان منكمّلش على داتا أو موديل ناقص.
     print("\n$ " + " ".join(command))
     result = subprocess.run(command)
     if result.returncode != 0:

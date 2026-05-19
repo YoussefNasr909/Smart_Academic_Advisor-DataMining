@@ -34,6 +34,8 @@ import numpy as np
 import pandas as pd
 
 # ── Re-use the clean generation logic ─────────────────────────────────────────
+# These course names are used to build grade, pass, and fail columns consistently.
+# بالمصري: دي أسماء المواد الأساسية اللي المشروع كله ماشي عليها.
 COURSE_MAP = {
     "math": "Mathematics",
     "programming": "Programming",
@@ -45,6 +47,9 @@ COURSE_MAP = {
     "web": "Web Development",
 }
 
+# Each track has a matching interest, important core courses, and realistic grade ranges.
+# These rules make the synthetic data meaningful instead of completely random.
+# بالمصري: هنا بنقول كل تراك محتاج مواد إيه ودرجاتها المفروض تبقى عاملة إزاي.
 TRACKS = {
     "AI/Machine Learning": {
         "interest": "AI/ML",
@@ -93,19 +98,27 @@ TRACKS = {
     },
 }
 
+# These mappings connect student interests to the academic tracks used in the dataset.
+# بالمصري: دي بتربط اختيار الطالب للتخصص بالتراك المناسب في الداتا.
 INTEREST_TO_TRACK = {v["interest"]: k for k, v in TRACKS.items()}
 INTERESTS = list(INTEREST_TO_TRACK.keys()) + ["Undecided"]
 
 
+# This function keeps generated grades inside the valid 0 to 100 range.
+# بالمصري: لو رقم طلع بره الرينج، بنرجعه بين 0 و100.
 def clipped_grade(value: float) -> int:
     return int(np.clip(round(value), 0, 100))
 
 
+# This function estimates GPA from course grades so each student has an academic summary.
+# بالمصري: بنحوّل متوسط الدرجات لـ GPA من 4 عشان يبقى عندنا ملخص لمستوى الطالب.
 def calculate_gpa(grades: Dict[str, int]) -> float:
     avg = float(np.mean(list(grades.values())))
     return round(float(np.clip(avg / 25 + np.random.normal(0, 0.04), 0, 4)), 2)
 
 
+# This function scores one track using grades, GPA, interest, and weak/failed courses.
+# بالمصري: هنا بنحسب التراك ده مناسب للطالب قد إيه قبل ما نختار أحسن تراك.
 def score_track(track: str, grades: Dict[str, int], interest: str, gpa: float) -> float:
     profile = TRACKS[track]
     core_avg = np.mean([grades[c] for c in profile["core"]])
@@ -122,28 +135,39 @@ def score_track(track: str, grades: Dict[str, int], interest: str, gpa: float) -
     return float(score)
 
 
+# This function chooses the best academic track by comparing all track scores.
+# بالمصري: بنجرّب كل التراكات ونختار أعلى score.
 def recommend_track(grades: Dict[str, int], interest: str, gpa: float) -> str:
     scores = {track: score_track(track, grades, interest, gpa) for track in TRACKS}
     return max(scores, key=scores.get)
 
 
+# This function creates the clean synthetic student dataset before adding data problems.
+# بالمصري: دي بتعمل داتا طلاب نظيفة الأول، وبعدها بنبوّظها عمدا للتدريب على التنضيف.
 def generate_clean_records(n: int = 900, seed: int = 42) -> pd.DataFrame:
     """Generate the base clean records (identical logic to generate_data.py)."""
+    # Fixed seeds make the generated dataset reproducible for training and discussion.
     np.random.seed(seed)
     random.seed(seed)
     track_names = list(TRACKS.keys())
     records: List[Dict[str, object]] = []
 
     for i in range(n):
+        # A base track is chosen first, then grades are generated around that track's profile.
+        # بالمصري: بنختار تراك مبدئي للطالب عشان درجاته تطلع منطقية مش عشوائية تماما.
         base_track = np.random.choice(track_names)
         profile = TRACKS[base_track]
 
         grades = {}
         for course_key in COURSE_MAP:
+            # Normal distribution makes most grades close to the expected range midpoint.
+            # بالمصري: أغلب الدرجات بتطلع حوالين المتوسط، زي الدرجات الحقيقية غالبا.
             low, high = profile["ranges"][course_key]
             grade = np.random.normal((low + high) / 2, max(6, (high - low) / 5))
             grades[course_key] = clipped_grade(grade)
 
+        # These random changes stop the synthetic data from looking too perfect.
+        # بالمصري: بنضيف طالب ضعيف في مادة أو قوي في مادة عشان الداتا تبقى واقعية.
         if np.random.rand() < 0.18:
             weak_course = np.random.choice(list(COURSE_MAP.keys()))
             grades[weak_course] = int(np.random.randint(35, 60))
@@ -198,6 +222,9 @@ def generate_clean_records(n: int = 900, seed: int = 42) -> pd.DataFrame:
 
 # ── Noise injection helpers ────────────────────────────────────────────────────
 
+# These lists contain the messy values injected into the clean dataset.
+# They help demonstrate realistic preprocessing problems in the project discussion.
+# بالمصري: دي أمثلة الأخطاء اللي بندخلها عمدا عشان نثبت إن preprocessing شغال.
 INTEREST_TYPOS = {
     "AI/ML":                ["ai/ml", "AI/ML", "Ai/Ml", "ai ml", "A.I/ML", "AI ML", "Ai/ml"],
     "Web Development":      ["web development", "Web Dev", "WEB DEVELOPMENT", "web developement",
@@ -226,6 +253,8 @@ OUTLIER_GRADES   = [-999, -10, -5, 101, 110, 150, 200, 999]
 OUTLIER_GPAS     = [-1.5, -0.5, 4.1, 4.5, 5.0, 5.2, 9.99]
 
 
+# This function makes student IDs messy to simulate real data entry mistakes.
+# بالمصري: بنغير شكل الـ ID كأنه اتكتب غلط في السيستم.
 def corrupt_student_id(sid: str, rng: np.random.Generator) -> str:
     """Return the student ID in one of several messy formats."""
     num = sid[3:]  # e.g. "0042"
@@ -243,11 +272,15 @@ def corrupt_student_id(sid: str, rng: np.random.Generator) -> str:
     return f"{sid}#"                              # "STU0042#"
 
 
+# This function changes interest values into typos or inconsistent formats.
+# بالمصري: بنعمل typos في الاهتمامات زي اللي بتحصل في إدخال البيانات.
 def corrupt_interest(interest: str, rng: np.random.Generator) -> str:
     variants = INTEREST_TYPOS.get(interest, [interest])
     return rng.choice(variants)
 
 
+# This function changes a numeric grade into a messy string value.
+# بالمصري: بنخلي الدرجة تبقى نص زي "85%" أو "90 pts" عشان preprocessing ينضفها.
 def corrupt_grade_as_string(grade: int, rng: np.random.Generator) -> str:
     choice = rng.integers(0, 4)
     if choice == 0:
@@ -262,6 +295,8 @@ def corrupt_grade_as_string(grade: int, rng: np.random.Generator) -> str:
     return f"  {grade}  "   # whitespace padding as string
 
 
+# This function changes a numeric GPA into a messy string value.
+# بالمصري: بنخلي الـ GPA يتكتب بشكل ملخبط زي "3.45a".
 def corrupt_gpa_as_string(gpa: float, rng: np.random.Generator) -> str:
     choice = rng.integers(0, 4)
     if choice == 0:
@@ -273,6 +308,8 @@ def corrupt_gpa_as_string(gpa: float, rng: np.random.Generator) -> str:
     return str(gpa) + "!"       # special character
 
 
+# This function adds missing values, duplicates, outliers, and typos for preprocessing practice.
+# بالمصري: دي أهم دالة بتبوّظ الداتا عشان نوري شغل الـ data cleaning.
 def inject_noise(df: pd.DataFrame, seed: int = 99) -> pd.DataFrame:
     """Apply all data quality issues to the clean DataFrame in-place copy."""
     rng = np.random.default_rng(seed)
@@ -293,6 +330,8 @@ def inject_noise(df: pd.DataFrame, seed: int = 99) -> pd.DataFrame:
             junk.append(None)
         else:
             junk.append(f"INFO_{rng.integers(1, 9999)}")
+    # This irrelevant column will be removed later during preprocessing.
+    # بالمصري: عمود مالوش لازمة عشان نوري إننا بنشيل noise.
     df["extra_info"] = junk
 
     # ── 2. Corrupt student IDs (~20 % of rows) ────────────────────────────────
@@ -405,6 +444,8 @@ def inject_noise(df: pd.DataFrame, seed: int = 99) -> pd.DataFrame:
     return df
 
 
+# This function runs the full dirty-data generation step and saves the raw dataset.
+# بالمصري: دي نقطة تشغيل ملف توليد الداتا قبل التنضيف.
 def generate_dirty_data(n: int = 900, seed: int = 42) -> pd.DataFrame:
     print("=" * 64)
     print("  Smart Academic Advisor - Dirty Dataset Generator")
